@@ -104,7 +104,8 @@ public class ProductReader {
 			cat.setSubCats(subCats);
 			cat = categoryRepository.saveAndFlush(cat);
 			logger.debug("Created Category " + cat.getName() + " with ID: " + cat.getId());
-		} else {
+		}
+		else {
 			cat = categoryRepository.findOneByName(productLine.getCategory());
 			logger.debug("Found Category {} with ID: {}", cat.getName(), cat.getId());
 		}
@@ -118,8 +119,9 @@ public class ProductReader {
 			subCats.add(sce);
 			cat.setSubCats(subCats);
 			cat = categoryRepository.saveAndFlush(cat);
-			logger.debug("Created SubCategory [{}] with ID: {}", sce.getDisplayname(), sce.getUrladdress());
-		} else {
+			logger.debug("Created SubCategory [{}] with urladdress: {}", sce.getDisplayname(), sce.getUrladdress());
+		}
+		else {
 			// Do Nothing. At this point the category and subcategory exist and are in
 			// the database.
 			sce = findSubCategory(cat, productLine);
@@ -131,10 +133,10 @@ public class ProductReader {
 		ProductEntity pe = new ProductEntity();
 		// TODO: Need to add store to Product Entity
 		pe.setCategory(sce.getUrladdress());
-		pe.setDescription(productLine.getProductDescription());
+		pe.setDescription(filterCharacters(productLine.getProductDescription()));
 		pe.setImagefile("resources/images/photonotavailable.jpg");
 		pe.setInventory(new Integer(0));
-		pe.setName(productLine.getProductDescription());
+		pe.setName(filterCharacters(productLine.getProductDescription()));
 		pe.setPrice(productLine.getPrice());
 		pe.setSku("");
 		pe.setStore(productLine.getStore());
@@ -166,11 +168,13 @@ public class ProductReader {
 
 	private String buildUrlName(ProductLine productLine) {
 		String urlName = productLine.getSubCategory();
-		urlName.replaceAll("\\s+", "");
-		urlName.replaceAll(",", "");
-		urlName.replaceAll("&", "");
-		urlName.replaceAll("'", "");
-		urlName.replaceAll(".", "");
+		urlName = urlName.replaceAll("\\s+", "");
+		urlName = urlName.replaceAll(",", "");
+		urlName = urlName.replaceAll("&", "");
+		urlName = urlName.replaceAll("'", "");
+		urlName = urlName.replaceAll("\\.", "");
+		urlName = urlName.replaceAll(" ", "");
+		urlName = urlName.replaceAll("/", "-");
 		urlName = urlName.toLowerCase();
 		return urlName;
 	}
@@ -210,24 +214,32 @@ public class ProductReader {
 		String result = "";
 		if (null == cell) {
 			return result;
-		} else {
+		}
+		else {
 			switch (cell.getCellType()) {
-			case Cell.CELL_TYPE_BOOLEAN:
-				if (cell.getBooleanCellValue()) {
-					result = "true";
-				} else {
-					result = "false";
-				}
-				break;
-			case Cell.CELL_TYPE_NUMERIC:
-				result = Double.toString(cell.getNumericCellValue());
-				break;
-			case Cell.CELL_TYPE_STRING:
-				result = cell.getStringCellValue();
-				break;
+				case Cell.CELL_TYPE_BOOLEAN:
+					if (cell.getBooleanCellValue()) {
+						result = "true";
+					}
+					else {
+						result = "false";
+					}
+					break;
+				case Cell.CELL_TYPE_NUMERIC:
+					result = Double.toString(cell.getNumericCellValue());
+					break;
+				case Cell.CELL_TYPE_STRING:
+					result = cell.getStringCellValue();
+					break;
 			}
 		}
 		return result;
+	}
+
+	private String filterCharacters(String filterString) {
+		filterString.replace("'", "");
+		filterString.replace("`", "");
+		return filterString;
 	}
 
 }
