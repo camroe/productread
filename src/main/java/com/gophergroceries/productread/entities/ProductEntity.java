@@ -51,7 +51,7 @@ public class ProductEntity {
 	@Column(name = "popular")
 	private String popular;
 
-	@Column(name = "magefile")
+	@Column(name = "imagefile")
 	private String imagefile;
 
 	@Column(name = "category")

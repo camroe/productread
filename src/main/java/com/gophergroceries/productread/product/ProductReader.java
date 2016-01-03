@@ -30,7 +30,7 @@ import com.gophergroceries.productread.repositories.ProductsRepository;
 public class ProductReader {
 	private static final Logger logger = LoggerFactory.getLogger(ProductReader.class);
 
-	@Value("${com.grophergroceries.products.filename:data/products.xlsx}")
+	@Value("${com.grophergroceries.products.filename:data/2014-12-20-MasterDataLoad.xlsx}")
 	private String FILE_PATH;
 
 	@Autowired
@@ -104,8 +104,7 @@ public class ProductReader {
 			cat.setSubCats(subCats);
 			cat = categoryRepository.saveAndFlush(cat);
 			logger.debug("Created Category " + cat.getName() + " with ID: " + cat.getId());
-		}
-		else {
+		} else {
 			cat = categoryRepository.findOneByName(productLine.getCategory());
 			logger.debug("Found Category {} with ID: {}", cat.getName(), cat.getId());
 		}
@@ -120,8 +119,7 @@ public class ProductReader {
 			cat.setSubCats(subCats);
 			cat = categoryRepository.saveAndFlush(cat);
 			logger.debug("Created SubCategory [{}] with urladdress: {}", sce.getDisplayname(), sce.getUrladdress());
-		}
-		else {
+		} else {
 			// Do Nothing. At this point the category and subcategory exist and are in
 			// the database.
 			sce = findSubCategory(cat, productLine);
@@ -141,8 +139,12 @@ public class ProductReader {
 		pe.setSku("");
 		pe.setStore(productLine.getStore());
 		logger.trace(productLine.toString());
-		pe = productsRepository.save(pe);
-		logger.debug("Product Added to table. Id = {}. Name = {}", pe.getId(), pe.getName());
+		if (isDuplicate(pe)) {
+			logger.debug("Product is a DUPLICATE: Name = {} ", pe.getName());
+		} else {
+			pe = productsRepository.save(pe);
+			logger.debug("Product Added to table. Id = {}. Name = {}", pe.getId(), pe.getName());
+		}
 	}
 
 	/**
@@ -214,23 +216,21 @@ public class ProductReader {
 		String result = "";
 		if (null == cell) {
 			return result;
-		}
-		else {
+		} else {
 			switch (cell.getCellType()) {
-				case Cell.CELL_TYPE_BOOLEAN:
-					if (cell.getBooleanCellValue()) {
-						result = "true";
-					}
-					else {
-						result = "false";
-					}
-					break;
-				case Cell.CELL_TYPE_NUMERIC:
-					result = Double.toString(cell.getNumericCellValue());
-					break;
-				case Cell.CELL_TYPE_STRING:
-					result = cell.getStringCellValue();
-					break;
+			case Cell.CELL_TYPE_BOOLEAN:
+				if (cell.getBooleanCellValue()) {
+					result = "true";
+				} else {
+					result = "false";
+				}
+				break;
+			case Cell.CELL_TYPE_NUMERIC:
+				result = Double.toString(cell.getNumericCellValue());
+				break;
+			case Cell.CELL_TYPE_STRING:
+				result = cell.getStringCellValue();
+				break;
 			}
 		}
 		return result;
@@ -242,4 +242,29 @@ public class ProductReader {
 		return filterString;
 	}
 
+	private boolean isDuplicate(ProductEntity pe) {
+		boolean returnValue = false;
+		Iterable<ProductEntity> iterable = productsRepository.findAll();
+		Iterator<ProductEntity> iterator = iterable.iterator();
+		ProductEntity pe2 = null;
+		while (iterator.hasNext()) {
+			pe2 = iterator.next();
+			if (null != pe2) {
+				if (null != pe2.getName()) {
+					if (pe2.getName().equals(pe.getName())) {
+						if (pe2.getCategory().equals(pe.getCategory())) {
+							returnValue = true;
+							break;
+						}
+					}
+				}
+			}
+		}
+		if (null != pe2) {
+			logger.trace("Product 1 {} and Product 2 {}  = " + returnValue, pe.getName(), pe2.getName());
+		} else {
+			logger.trace("Product 1 {} and Product 2 {}  = " + returnValue, pe.getName(), "NULL");
+		}
+		return returnValue;
+	}
 }
